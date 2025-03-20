@@ -2,20 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { connectDB, centralDB } = require('./config/database');
-const admin = require('firebase-admin'); // Add Firebase Admin
+const { db } = require('./config/firebase');
+//const admin = require('firebase-admin'); // Add Firebase Admin
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Firebase Admin using environment variable
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-const db = admin.firestore(); // Firestore instance
-global.firestoreDB = db; // Make accessible globally (or export via module)
 
 centralDB.on('error', (err) => {
   console.error('Central database connection error:', err);

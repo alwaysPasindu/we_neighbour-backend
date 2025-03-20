@@ -14,14 +14,9 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    let user;
-    let userType;
-
     const ServiceProvider = centralDB.model('ServiceProvider', ServiceSchema);
-    user = await ServiceProvider.findOne({ email });
-    if (user) {
-      userType = 'ServiceProvider';
-    }
+    let user = await ServiceProvider.findOne({ email });
+    
 
     if (!user) {
       const Apartment = centralDB.model('Apartment', ApartmentSchema);
@@ -34,21 +29,79 @@ exports.login = async (req, res) => {
         const Manager = db.model('Manager', ManagerSchema);
 
         user = await Resident.findOne({ email });
-        if (user) {
-          userType = 'Resident';
-          user.apartmentComplexName = apartment.apartmentName;
-          break;
+        if (!user) {
+          user = await Manager.findOne({ email });
         }
 
-        user = await Manager.findOne({ email });
         if (user) {
-          userType = 'Manager';
           user.apartmentComplexName = apartment.apartmentName;
+          // If user is found, break the loop
           break;
+      
         }
-      }
     }
 
+    if (!user) {
+      const CentralManager = centralDB.model('CentralManager', ManagerSchema);
+      user = await CentralManager.findOne({ email });
+
+      if (user) {
+
+          const isMatch = await bcrypt.compare(password, user.password);
+          if (!isMatch) {
+              return res.status(400).json({ message: 'Your Email or Password is incorrect' });
+          }
+          // If the manager is pending, return a specific message
+          if (user.status === 'pending') {
+              return res.status(403).json({ message: 'Your registration request is pending or rejected.' });
+          }
+      }
+  }
+}
+
+
+const isMatch = await bcrypt.compare(password, user.password);
+if (!isMatch) {
+    return res.status(400).json({ message: 'Your Email or Password is incorrect' });
+}
+
+
+// For residents, check if they are approved
+if ((user.role === 'Resident' || user.role === 'Manager') && user.status !== 'approved') {
+    return res.status(403).json({ message: 'Your registration request is pending or rejected' });
+}
+
+
+
+// Generate JWT token
+const payload = {
+    id: user._id,
+    role: user.role,
+    apartmentComplexName: user.apartmentComplexName || null, // Include apartment name if applicable
+    status:user.status,
+};
+const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+// Return token and user details
+res.json({
+    token,
+    user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        apartmentComplexName: user.apartmentComplexName || null,
+        role: user.role,
+        status:user.status,
+    },
+});
+} catch (error) {
+console.error('Error in login:', error);
+return res.status(500).json({ message: 'Server error', error: error.message });
+}
+};
+
+
+/*
     if (!user) {
       return res.status(400).json({ message: 'Your Email or Password is incorrect' });
     }
@@ -98,4 +151,4 @@ exports.login = async (req, res) => {
     console.error('Error in login:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
-};
+};*/

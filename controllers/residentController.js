@@ -1,6 +1,7 @@
 const ResidentSchema = require('../models/Resident');
 const ManagerSchema = require('../models/Manager');
 const { connectDB } = require('../config/database');
+const { syncUserToFirebase } = require('../utils/firebaseSync');
 const { firestoreDB } = global;
 const bcrypt = require('bcrypt');
 
@@ -73,6 +74,10 @@ exports.approveResident = async (req, res) => {
         // Update the resident's status
         resident.status = status;
         await resident.save();
+
+        if (status === 'approved') {
+          await syncUserToFirebase(resident, req.user.apartmentComplexName);
+        }
 
         console.log(`Resident ${residentId} status updated to: ${status}`);
         return res.status(200).json({ message: `Resident request ${status}` });
