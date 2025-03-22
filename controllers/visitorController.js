@@ -37,7 +37,7 @@ exports.generateQRCodeData = async (req, res) => {
 
         await visitor.save();
 
-        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.BASE_URL || 'https://we-neighbour-app-9modf.ondigitalocean.app';
         const qrUrl = `${baseUrl}/api/visitor/verify/${visitor._id}?apartment=${encodeURIComponent(apartmentComplexName)}`;
 
         res.json({
