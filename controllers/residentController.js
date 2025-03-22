@@ -2,7 +2,8 @@ const ResidentSchema = require('../models/Resident');
 const ManagerSchema = require('../models/Manager');
 const { connectDB } = require('../config/database');
 const { syncUserToFirebase } = require('../utils/firebaseSync');
-const { firestoreDB } = global;
+const { db: firestoreDB } = require('../config/firebase');
+
 const bcrypt = require('bcrypt');
 
 exports.registerResident = async (req, res) => {

@@ -1,5 +1,5 @@
 // utils/firebaseSync.js
-const { db } = require('../config/firebase');
+const { admin, db } = require('../config/firebase');
 
 async function syncUserToFirebase(user, apartmentName) {
   const userData = {

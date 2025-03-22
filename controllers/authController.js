@@ -79,6 +79,7 @@ const payload = {
     role: user.role,
     apartmentComplexName: user.apartmentComplexName || null, // Include apartment name if applicable
     status:user.status,
+    phone: user.phone,
 };
 const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
@@ -92,6 +93,7 @@ res.json({
         apartmentComplexName: user.apartmentComplexName || null,
         role: user.role,
         status:user.status,
+        phone: user.phone,
     },
 });
 } catch (error) {

@@ -41,6 +41,13 @@ exports.isServiceProvider = function (req, res, next) {
   next();
 };
 
+exports.isResidentOrManager = function (req, res, next) {
+  if (req.user.role === 'Resident' || req.user.role === 'Manager') {
+    return next();
+  }
+  return res.status(403).json({ message: 'Access denied. Not authorized.' });
+};
+
 
 
 

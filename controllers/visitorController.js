@@ -3,7 +3,6 @@ const VisitorSchema = require('../models/Visitor');
 const ResidentSchema = require('../models/Resident');
 
 
-// Generate QR Code Data
 exports.generateQRCodeData = async (req, res) => {
     try {
         const { numOfVisitors, visitorNames } = req.body;
@@ -21,32 +20,29 @@ exports.generateQRCodeData = async (req, res) => {
         if (!residentId) {
             console.error('No resident ID found in req.user:', req.user);
             return res.status(401).json({ message: 'Authentication failed: No resident ID found' });
-
         }
 
         console.log('Resident found:', resident);
         
-        const visitor = new Visitor( {
-            resident: residentId, // Add this line with residentId (ObjectId)
+        const visitor = new Visitor({
+            resident: residentId,
             residentName: resident.name,
             apartmentCode: resident.apartmentCode,
+            apartmentComplexName: resident.apartmentComplexName,
             numOfVisitors,
-            visitorNames:[],
+            visitorNames: visitorNames || [], // Use visitorNames from req.body, default to empty array if not provided
             phone: resident.phone,
-            status:'Pending',
+            status: 'Pending',
         });
 
-        
         await visitor.save();
 
         const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-        const qrUrl = `${baseUrl}/visitor/verify/${visitor._id}`;
-
-    
+        const qrUrl = `${baseUrl}/api/visitor/verify/${visitor._id}?apartment=${encodeURIComponent(apartmentComplexName)}`;
 
         res.json({
             success: true,
-            qrUrl, // URL for QR generation in frontend
+            qrUrl,
             visitorId: visitor._id.toString(),
         });
     } catch (error) {
@@ -55,15 +51,11 @@ exports.generateQRCodeData = async (req, res) => {
     }
 };
 
-
 exports.verifyVisitor = async (req, res) => {
     try {
         const { visitorId } = req.params;
+        const apartmentComplexName = req.headers['x-apartment-name'] || req.query.apartment;
 
-        // Since apartmentComplexName is in token, we need a way to get it without query param
-        // For simplicity, assume this runs in a context where apartment is derivable (e.g., via a header or separate auth)
-        // Here, we'll require an 'x-apartment-name' header for security to provide it (or adjust based on your auth setup)
-        const apartmentComplexName = req.headers['x-apartment-name'];
         if (!apartmentComplexName) {
             return res.status(400).send('<h1>Missing apartment name</h1>');
         }
@@ -80,7 +72,7 @@ exports.verifyVisitor = async (req, res) => {
             return res.status(400).send(`<h1>QR Code Already Processed: ${visitor.status}</h1>`);
         }
 
-        // Serve simple verification page
+        // Serve updated verification page with more details
         res.send(`
             <!DOCTYPE html>
             <html>
@@ -88,16 +80,25 @@ exports.verifyVisitor = async (req, res) => {
                 <title>Visitor Verification</title>
                 <style>
                     body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-                    .container { max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
                     button { padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; cursor: pointer; color: white; }
                     #approve { background-color: #007bff; }
                     #decline { background-color: #dc3545; }
+                    .details { text-align: left; margin-bottom: 20px; }
+                    .details p { margin: 5px 0; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <h1>Visitor Verification</h1>
-                    <p>Number of Visitors: ${visitor.numOfVisitors}</p>
+                    <div class="details">
+                        <p><strong>Resident Name:</strong> ${visitor.residentName}</p>
+                        <p><strong>Apartment Code:</strong> ${visitor.apartmentCode}</p>
+                        <p><strong>Number of Visitors:</strong> ${visitor.numOfVisitors}</p>
+                        <p><strong>Visitor Names:</strong> ${visitor.visitorNames.length > 0 ? visitor.visitorNames.join(', ') : 'Not provided'}</p>
+                        <p><strong>Phone:</strong> ${visitor.phone}</p>
+                        <p><strong>Created At:</strong> ${new Date(visitor.createdAt).toLocaleString()}</p>
+                    </div>
                     <button id="approve" onclick="updateStatus('approve')">Approve</button>
                     <button id="decline" onclick="updateStatus('reject')">Decline</button>
                 </div>
@@ -150,14 +151,16 @@ exports.updateVisitorStatus = async (req, res) => {
         }
 
         visitor.status = action === 'approve' ? 'Approved' : 'Rejected';
+        console.log(`Updating visitor ${visitorId} status to: ${visitor.status}`);
         await visitor.save();
+        console.log(`Visitor ${visitorId} saved successfully with status: ${visitor.status}`);
 
         res.json({
             success: true,
             message: `Visitor ${action === 'approve' ? 'accepted' : 'rejected'}`,
         });
     } catch (error) {
-        console.error('Error updating visitor status:', error);
+        console.error('Error updating visitor status:', error.stack); // Log full error stack
         res.status(500).json({ message: 'Server Error' });
     }
 };

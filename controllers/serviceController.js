@@ -1,14 +1,10 @@
 const mongoose = require('mongoose');
 const { centralDB } = require('../config/database');
 const Service = require('../models/Service');
-const ServiceProviderSchema = require('../models/ServiceProvider'); // Schema
-const ResidentSchema = require('../models/Resident'); // Assume schema, adjust if needed
-const ManagerSchema = require('../models/Manager'); // Assume schema, adjust if needed
+const ServiceProviderSchema = require('../models/ServiceProvider'); 
 
-// Define models using centralDB
+
 const ServiceProvider = centralDB.model('ServiceProvider', ServiceProviderSchema);
-const Resident = ResidentSchema ? centralDB.model('Resident', ResidentSchema) : null;
-const Manager = ManagerSchema ? centralDB.model('Manager', ManagerSchema) : null;
 
 exports.createService = async (req, res) => {
   try {
